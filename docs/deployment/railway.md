@@ -55,6 +55,8 @@ SOLACE_DEV_MODE=true
 
 > **Tip:** Go to **Variables** → **Raw Editor**, paste the above, replace `your-api-key` with your API key, and save.
 
+After saving, redeploy the service to apply the new variables.
+
 ## 5. Expose the Web UI
 
 1. Go to **Settings** tab → **Networking**

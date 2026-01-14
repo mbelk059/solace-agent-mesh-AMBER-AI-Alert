@@ -15,13 +15,13 @@ This is a **hackathon quickstart template** for building SAM applications. The i
 
 ## Quick Reference
 
-| Task                 | Command/Location                                                                |
-| -------------------- | ------------------------------------------------------------------------------- |
+| Task                 | Command/Location                                                                                      |
+| -------------------- | ----------------------------------------------------------------------------------------------------- |
 | Run locally (Docker) | `docker build -t sam-quickstart . && docker run --rm -it -p 8000:8000 --env-file .env sam-quickstart` |
-| Run locally (CLI)    | `uv sync && uv run sam run configs/`                                            |
-| Web UI               | http://localhost:8000                                                           |
-| Create new agent     | Add YAML file in `configs/agents/`                                              |
-| Create custom tool   | Add Python function in `src/`, reference in agent YAML                          |
+| Run locally (CLI)    | `uv sync && uv run sam run configs/`                                                                  |
+| Web UI               | http://localhost:8000                                                                                 |
+| Create new agent     | Add YAML file in `configs/agents/`                                                                    |
+| Create custom tool   | Add Python function in `src/`, reference in agent YAML                                                |
 
 ## Context7: Your SAM Documentation Source
 
@@ -332,11 +332,13 @@ instruction: |
 **Why this happens:** The agent's LLM generates the final response. Even with tool output in context, the model may confidently generate fake data. Explicit instructions reduce this risk.
 
 **High-risk scenarios:**
+
 - Tools returning specific values (IPs, IDs, URLs, timestamps)
 - Data lookups where accuracy matters
 - Any tool where a plausible-but-wrong answer exists
 
 **Lower-risk scenarios:**
+
 - Text transformation (summarization, formatting)
 - Tools returning large amounts of context
 - Creative tasks where exact values don't matter
