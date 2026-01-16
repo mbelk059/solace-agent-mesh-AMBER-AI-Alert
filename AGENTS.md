@@ -229,17 +229,31 @@ log:
 
 ## Environment Variables
 
-Required in `.env` (see [LLM API Setup](docs/llm-setup.md) for free API options):
-
-```env
-LLM_SERVICE_API_KEY=your-api-key
-LLM_SERVICE_ENDPOINT=https://api.cerebras.ai/v1
-LLM_SERVICE_PLANNING_MODEL_NAME=openai/zai-glm-4.7
-LLM_SERVICE_GENERAL_MODEL_NAME=openai/zai-glm-4.7
-SOLACE_DEV_MODE=true
-```
+See [LLM API Setup](docs/llm-setup.md) for required variables and free API options. Use `.env.example` as a template.
 
 ## Guidelines for AI Assistants
+
+### Use exact values from reference files
+
+Unless the user specifies their own values, do not guess or invent configuration. Use the reference files as the source of truth:
+
+| Config needed       | Read this file first         |
+| ------------------- | ---------------------------- |
+| LLM model names     | `docs/llm-setup.md`          |
+| Environment vars    | `.env.example`               |
+| YAML anchors        | `configs/shared_config.yaml` |
+
+If the user provides their own API key, endpoint, or model preference, use their values. Otherwise, copy values character-for-character from the reference files—guessed model names cause silent failures that waste hackathon time.
+
+### Workflow for setup and deployment tasks
+
+When the user asks you to run, deploy, or set up the project:
+
+1. **Read the reference files first** - before creating `.env` or running commands, read `docs/llm-setup.md` and `.env.example` to understand the required configuration.
+
+2. **Use user-provided values or copy from docs** - if the user provided specific values (API key, endpoint, model), use those. For anything not specified, copy exactly from the reference files.
+
+3. **Execute the commands** - run the actual build/deploy commands rather than explaining what the user could do.
 
 ### Workflow for creating agents or tools
 
@@ -259,7 +273,7 @@ This sequence matters because SAM's patterns are framework-specific. Code that l
 
 ### Working with code
 
-Read and understand relevant files before proposing changes. This prevents suggesting edits that conflict with existing patterns or miss important context.
+Read and understand relevant files before proposing changes or creating configuration. Do not speculate about values you have not read from source files. If the user asks you to configure something, open and read the authoritative source first.
 
 When the user asks for a change, implement it rather than describing what to do. Hackathon participants want working code, not explanations of what they could do themselves.
 
