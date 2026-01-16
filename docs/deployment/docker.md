@@ -38,8 +38,16 @@ This copies your `configs/` and `src/` into the SAM base image and installs any 
 ## 3. Run
 
 ```bash
+# Detached mode (recommended) - runs in background, returns immediately
+docker run -d --rm -p 8000:8000 --env-file .env --name sam-app sam-hackathon-quickstart
+
+# Or interactive mode - shows logs in terminal (Ctrl+C to stop)
 docker run --rm -it -p 8000:8000 --env-file .env sam-hackathon-quickstart
 ```
+
+If using detached mode:
+- View logs: `docker logs sam-app` or `docker logs -f sam-app` (follow)
+- Stop: `docker stop sam-app`
 
 ## 4. Access
 

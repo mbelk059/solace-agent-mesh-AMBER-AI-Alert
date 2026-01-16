@@ -17,7 +17,7 @@ This is a **hackathon quickstart template** for building SAM applications. The i
 
 | Task                 | Command/Location                                                                                      |
 | -------------------- | ----------------------------------------------------------------------------------------------------- |
-| Run locally (Docker) | `docker build -t sam-hackathon-quickstart . && docker run --rm -it -p 8000:8000 --env-file .env sam-hackathon-quickstart` |
+| Run locally (Docker) | `docker build -t sam-hackathon-quickstart . && docker run -d --rm -p 8000:8000 --env-file .env --name sam-app sam-hackathon-quickstart` |
 | Run locally (CLI)    | `uv sync && uv run sam run configs/`                                                                  |
 | Web UI               | http://localhost:8000                                                                                 |
 | Create new agent     | Add YAML file in `configs/agents/`                                                                    |
@@ -245,6 +245,23 @@ Unless the user specifies their own values, do not guess or invent configuration
 
 If the user provides their own API key, endpoint, or model preference, use their values. Otherwise, copy values character-for-character from the reference files—guessed model names cause silent failures that waste hackathon time.
 
+### Running Docker containers
+
+When running Docker containers, always use **detached mode** (`-d` flag) so the container runs in the background and returns control immediately. This works reliably across all AI coding assistants.
+
+```bash
+# Correct - detached mode
+docker run -d --rm -p 8000:8000 --env-file .env --name sam-app sam-hackathon-quickstart
+
+# Incorrect - blocks the terminal or may not work in some environments
+docker run --rm -it -p 8000:8000 --env-file .env sam-hackathon-quickstart
+```
+
+After starting in detached mode:
+- Check status: `docker ps`
+- View logs: `docker logs sam-app` or `docker logs -f sam-app` (follow)
+- Stop: `docker stop sam-app`
+
 ### Workflow for setup and deployment tasks
 
 When the user asks you to run, deploy, or set up the project:
@@ -253,7 +270,7 @@ When the user asks you to run, deploy, or set up the project:
 
 2. **Use user-provided values or copy from docs** - if the user provided specific values (API key, endpoint, model), use those. For anything not specified, copy exactly from the reference files.
 
-3. **Execute the commands** - run the actual build/deploy commands rather than explaining what the user could do.
+3. **Execute the commands** - run the actual build/deploy commands rather than explaining what the user could do. When running Docker containers, always use detached mode (`-d`).
 
 ### Workflow for creating agents or tools
 
