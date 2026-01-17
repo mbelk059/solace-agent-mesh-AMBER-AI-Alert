@@ -30,19 +30,19 @@ SOLACE_DEV_MODE=true
 ## 2. Build
 
 ```bash
-docker build -t sam-hackathon-quickstart .
+docker build -t meshflow-markets .
 ```
 
-This copies your `configs/` and `src/` into the SAM base image and installs any additional dependencies from `pyproject.toml`.
+This copies your `configs/` and `src/` into the solace-agent-mesh image and installs any additional dependencies from `pyproject.toml`.
 
 ## 3. Run
 
 ```bash
 # Detached mode (recommended) - runs in background, returns immediately
-docker run -d --rm -p 8000:8000 --env-file .env --name sam-app sam-hackathon-quickstart
+docker run -d --rm -p 8000:8000 --env-file .env --name sam-app meshflow-markets
 
 # Or interactive mode - shows logs in terminal (Ctrl+C to stop)
-docker run --rm -it -p 8000:8000 --env-file .env sam-hackathon-quickstart
+docker run -it --rm -p 8000:8000 --env-file .env --name sam-app meshflow-markets
 ```
 
 If using detached mode:
