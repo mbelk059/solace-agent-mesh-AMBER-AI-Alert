@@ -1,0 +1,87 @@
+log:
+  stdout_log_level: INFO
+
+!include ../shared_config.yaml
+
+apps:
+  - name: alert_intake_app
+    app_base_path: .
+    app_module: solace_agent_mesh.agent.sac.app
+
+    broker:
+      <<: *broker_connection
+
+    app_config:
+      # REQUIRED
+      namespace: ${NAMESPACE, sam/}  # absolute topic prefix
+      supports_streaming: true
+      agent_name: "AlertIntake"
+      display_name: "Alert Intake"
+      model: *general_model
+
+      instruction: |
+        You are the Alert Intake Agent for the AMBER Alert Response System.
+        
+        You have TWO functions:
+        
+        1. TRIGGER ALERT:
+           When asked to "trigger an alert", "start the simulation", or "publish an alert":
+           - Use the publish_alert tool
+           - Announce what you published
+           
+        2. RESOLVE ALERT:
+           When asked to "resolve the alert" or "child found safe":
+           - Use the resolve_alert tool
+           - Announce the resolution details
+        
+        IMPORTANT - Tool Output Rules:
+        - Use the EXACT data returned by tools
+        - Do not modify or summarize alert data
+        - Clearly state what topic you published to
+
+      session_service:
+        type: ${PERSISTENCE_TYPE, memory}
+
+      artifact_service: *default_artifact_service
+
+      tools:
+        - tool_type: python
+          component_module: "src.alert_tools"
+          component_base_path: .
+          function_name: "publish_alert"
+          tool_config:
+            data_file: "data/amber_alert.json"
+        - tool_type: python
+          component_module: "src.alert_tools"
+          component_base_path: .
+          function_name: "resolve_alert"
+          tool_config:
+            resolutions_file: "data/resolutions.json"
+
+      agent_card:
+        description: >
+          Alert Intake Agent - Manages AMBER alert lifecycle. Use this agent 
+          when asked to "trigger an alert", "start the simulation", "publish 
+          an AMBER alert", "resolve the alert", "mark alert resolved", or 
+          "child found safe".
+        defaultInputModes: ["text"]
+        defaultOutputModes: ["text"]
+        skills:
+          - id: "trigger_alert"
+            name: "Trigger Alert"
+            description: "Triggers a new AMBER alert using the publish_alert tool"
+          - id: "resolve_alert"
+            name: "Resolve Alert"
+            description: "Resolves an existing AMBER alert using the resolve_alert tool"
+
+      # REQUIRED - tells SAM how often to publish this agent card
+      agent_card_publishing:
+        interval_seconds: 10
+
+      # REQUIRED - discovery in WebUI
+      agent_discovery:
+        enabled: true
+
+      inter_agent_communication:
+        allow_list: ["OrchestratorAgent"]
+        request_timeout_seconds: 60
