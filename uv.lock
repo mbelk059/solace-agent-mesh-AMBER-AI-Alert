@@ -2631,12 +2631,14 @@ name = "sam-hackathon-quickstart"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "httpx" },
     { name = "pygithub" },
     { name = "solace-agent-mesh" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.27.0" },
     { name = "pygithub", specifier = "==2.8.1" },
     { name = "solace-agent-mesh", specifier = "==1.13.3" },
 ]
