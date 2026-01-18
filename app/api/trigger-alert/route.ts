@@ -86,6 +86,18 @@ export async function POST() {
     // Simulate agent processing with delays - all events include alert_id with unique data
     setTimeout(() => {
       const eventTime = Date.now();
+      const childAge = alertData.child.age;
+      const timeSinceAbduction = Math.floor((Date.now() - new Date(alertData.last_known.time).getTime()) / (1000 * 60)); // minutes
+      const suspectKnown = alertData.suspect.name !== 'Unknown male';
+      
+      // AI Analyzer reasoning
+      const aiReasoning = [];
+      if (childAge < 10) aiReasoning.push(`Child age ${childAge} indicates high vulnerability`);
+      if (!suspectKnown) aiReasoning.push('Unknown suspect relationship increases risk');
+      if (timeSinceAbduction < 30) aiReasoning.push(`Recent abduction (${timeSinceAbduction} min ago) - critical time window`);
+      if (alertData.incident_details.urgency.includes('HIGH')) aiReasoning.push('Incident details indicate high urgency');
+      aiReasoning.push('Multiple risk factors present - immediate action required');
+      
       broadcastEvent({
         id: makeEventId('assessed', 1000),
         timestamp: eventTime,
@@ -98,7 +110,16 @@ export async function POST() {
           urgency: alertData.incident_details.urgency,
           child_name: alertData.child.name,
           location: alertData.last_known.location,
-          vehicle: `${alertData.vehicle.color} ${alertData.vehicle.make} ${alertData.vehicle.model}`
+          vehicle: `${alertData.vehicle.color} ${alertData.vehicle.make} ${alertData.vehicle.model}`,
+          ai_reasoning: aiReasoning,
+          factors_considered: {
+            child_age: childAge,
+            child_vulnerability: childAge < 10 ? 'High' : 'Medium',
+            suspect_relationship: suspectKnown ? 'Known' : 'Unknown',
+            time_since_abduction: `${timeSinceAbduction} minutes`,
+            location_type: alertData.last_known.location.includes('Highway') || alertData.last_known.location.includes('Park') ? 'Public area' : 'Urban',
+            information_quality: 'Good - vehicle details and location available'
+          }
         },
         color: '#ffa500',
       });
@@ -123,6 +144,19 @@ export async function POST() {
 
     setTimeout(() => {
       const eventTime = Date.now();
+      const location = alertData.last_known.location;
+      const direction = alertData.last_known.direction || 'north';
+      
+      // Geo Intelligence reasoning
+      const geoReasoning = [];
+      geoReasoning.push(`Last known location: ${location}`);
+      if (direction.includes('north')) {
+        geoReasoning.push('Vehicle heading north - prioritizing north corridor and Highway 5');
+        geoReasoning.push('Highway 5 is major escape route with multiple exit points');
+      }
+      geoReasoning.push('Rest stops identified as likely stopping points (30km radius)');
+      geoReasoning.push('Zones prioritized by traffic volume and escape probability');
+      
       broadcastEvent({
         id: makeEventId('geofence', 2500),
         timestamp: eventTime,
@@ -132,8 +166,14 @@ export async function POST() {
         alert_id: uniqueAlertId,
         data: { 
           zones: ['north_corridor', 'highway_5', 'rest_stops'],
-          center_location: alertData.last_known.location,
-          coordinates: alertData.last_known.coords
+          center_location: location,
+          coordinates: alertData.last_known.coords,
+          ai_reasoning: geoReasoning,
+          zone_details: {
+            north_corridor: { priority: 'high', radius_km: 20, reason: 'Primary escape route, high traffic volume' },
+            highway_5: { priority: 'high', radius_km: 15, reason: 'Major highway with multiple exits, likely route' },
+            rest_stops: { priority: 'medium', radius_km: 30, reason: 'Potential stopping points, wider search area' }
+          }
         },
         color: '#00aaff',
       });
@@ -166,6 +206,53 @@ export async function POST() {
     // First tip at 4s
     setTimeout(() => {
       const eventTime = Date.now();
+      const tip1 = tipsToSend[0];
+      const childSeen = tip1.sighting?.child_seen || false;
+      const vehicleMatch = tip1.sighting?.vehicle_match || '';
+      const callerReliability = tip1.caller_details?.reliability || '';
+      const distance = tip1.location?.distance_from_last_known_km || 0;
+      
+      // Calculate tip confidence and reasoning
+      const tipReasoning = [];
+      let confidenceScore = 0.5; // Base confidence
+      
+      if (childSeen) {
+        confidenceScore += 0.3;
+        tipReasoning.push('✓ Direct child sighting - highest confidence indicator');
+      } else {
+        tipReasoning.push('⚠ No child sighting - reduces confidence');
+      }
+      
+      if (vehicleMatch && vehicleMatch.toLowerCase().includes(alertData.vehicle.color.toLowerCase())) {
+        confidenceScore += 0.2;
+        tipReasoning.push(`✓ Vehicle match confirmed (${alertData.vehicle.color} ${alertData.vehicle.make})`);
+      } else if (vehicleMatch) {
+        confidenceScore += 0.1;
+        tipReasoning.push(`⚠ Partial vehicle match - ${vehicleMatch}`);
+      }
+      
+      if (callerReliability && (callerReliability.toLowerCase().includes('verified') || callerReliability.toLowerCase().includes('previous'))) {
+        confidenceScore += 0.2;
+        tipReasoning.push(`✓ Verified caller reliability: ${callerReliability}`);
+      } else {
+        tipReasoning.push(`⚠ Caller reliability unknown - first time contact`);
+      }
+      
+      if (distance < 5) {
+        confidenceScore += 0.1;
+        tipReasoning.push(`✓ Location plausible - ${distance.toFixed(1)}km from last known location`);
+      } else if (distance < 20) {
+        tipReasoning.push(`Location reasonable - ${distance.toFixed(1)}km from last known location`);
+      } else {
+        confidenceScore -= 0.1;
+        tipReasoning.push(`⚠ Location distant - ${distance.toFixed(1)}km away, less plausible`);
+      }
+      
+      // Cap confidence at 1.0 (100%)
+      confidenceScore = Math.min(confidenceScore, 1.0);
+      const confidenceLevel = confidenceScore >= 0.7 ? 'high' : confidenceScore >= 0.5 ? 'medium' : 'low';
+      const confidencePct = Math.round(confidenceScore * 100);
+      
       broadcastEvent({
         id: makeEventId('tip1', 4000),
         timestamp: eventTime,
@@ -174,10 +261,20 @@ export async function POST() {
         to: 'AI Analyzer',
         alert_id: uniqueAlertId,
         data: { 
-          tip_id: tipsToSend[0].id, 
-          confidence: 'high',
+          tip_id: tip1.id, 
+          confidence: confidenceLevel,
+          confidence_score: confidencePct,
           child_name: alertData.child.name,
-          location: alertData.last_known.location
+          location: tip1.location?.description || alertData.last_known.location,
+          vehicle_match: vehicleMatch,
+          ai_reasoning: tipReasoning,
+          factors: {
+            child_seen: childSeen,
+            vehicle_match: vehicleMatch ? 'Yes' : 'No',
+            caller_reliability: callerReliability,
+            distance_km: distance.toFixed(1),
+            time_since_abduction: 'Recent'
+          }
         },
         color: '#00ff00',
       });
@@ -186,6 +283,64 @@ export async function POST() {
     // Second tip at 5s
     setTimeout(() => {
       const eventTime = Date.now();
+      const tip2 = tipsToSend[1];
+      const childSeen = tip2.sighting?.child_seen || false;
+      const vehicleMatch = tip2.sighting?.vehicle_match || '';
+      const callerReliability = tip2.caller_details?.reliability || '';
+      const distance = tip2.location?.distance_from_last_known_km || 0;
+      const childDescriptionMatch = tip2.sighting?.child_description_match || '';
+      const photoSubmitted = tip2.photo_submitted || false;
+      
+      // Calculate tip confidence and reasoning
+      const tipReasoning = [];
+      let confidenceScore = 0.5; // Base confidence
+      
+      if (childSeen) {
+        confidenceScore += 0.3;
+        tipReasoning.push('✓ Direct child sighting - highest confidence indicator');
+        if (childDescriptionMatch) {
+          confidenceScore += 0.1;
+          tipReasoning.push(`✓ Child description matches alert: ${childDescriptionMatch}`);
+        }
+      } else {
+        tipReasoning.push('⚠ No child sighting - reduces confidence');
+      }
+      
+      if (vehicleMatch && vehicleMatch.toLowerCase().includes(alertData.vehicle.color.toLowerCase())) {
+        confidenceScore += 0.2;
+        tipReasoning.push(`✓ Strong vehicle match (${alertData.vehicle.color} ${alertData.vehicle.make})`);
+      } else if (vehicleMatch) {
+        confidenceScore += 0.1;
+        tipReasoning.push(`⚠ Partial vehicle match - ${vehicleMatch}`);
+      }
+      
+      if (callerReliability && (callerReliability.toLowerCase().includes('verified') || callerReliability.toLowerCase().includes('previous'))) {
+        confidenceScore += 0.2;
+        tipReasoning.push(`✓ Verified caller with history: ${callerReliability}`);
+      } else {
+        tipReasoning.push(`⚠ Caller reliability unknown`);
+      }
+      
+      if (photoSubmitted) {
+        confidenceScore += 0.1;
+        tipReasoning.push('✓ Photo evidence submitted - increases credibility');
+      }
+      
+      if (distance < 5) {
+        confidenceScore += 0.1;
+        tipReasoning.push(`✓ Location very plausible - ${distance.toFixed(1)}km from last known location`);
+      } else if (distance < 20) {
+        tipReasoning.push(`Location reasonable - ${distance.toFixed(1)}km from last known location`);
+      } else {
+        confidenceScore -= 0.1;
+        tipReasoning.push(`⚠ Location distant - ${distance.toFixed(1)}km away`);
+      }
+      
+      // Cap confidence at 1.0 (100%)
+      confidenceScore = Math.min(confidenceScore, 1.0);
+      const confidenceLevel = confidenceScore >= 0.7 ? 'high' : confidenceScore >= 0.5 ? 'medium' : 'low';
+      const confidencePct = Math.round(confidenceScore * 100);
+      
       broadcastEvent({
         id: makeEventId('tip2', 5000),
         timestamp: eventTime,
@@ -194,10 +349,22 @@ export async function POST() {
         to: 'AI Analyzer',
         alert_id: uniqueAlertId,
         data: { 
-          tip_id: tipsToSend[1].id, 
-          confidence: 'high',
+          tip_id: tip2.id, 
+          confidence: confidenceLevel,
+          confidence_score: confidencePct,
           child_name: alertData.child.name,
-          vehicle_match: `${alertData.vehicle.color} ${alertData.vehicle.make}`
+          location: tip2.location?.description || alertData.last_known.location,
+          vehicle_match: vehicleMatch || `${alertData.vehicle.color} ${alertData.vehicle.make}`,
+          ai_reasoning: tipReasoning,
+          factors: {
+            child_seen: childSeen,
+            child_description_match: childDescriptionMatch || 'N/A',
+            vehicle_match: vehicleMatch ? 'Yes' : 'No',
+            caller_reliability: callerReliability,
+            distance_km: distance.toFixed(1),
+            photo_submitted: photoSubmitted ? 'Yes' : 'No',
+            time_since_abduction: 'Recent'
+          }
         },
         color: '#00ff00',
       });

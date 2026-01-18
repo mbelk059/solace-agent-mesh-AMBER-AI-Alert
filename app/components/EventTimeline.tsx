@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Event } from '../page';
 
 interface EventTimelineProps {
@@ -7,9 +8,265 @@ interface EventTimelineProps {
 }
 
 export default function EventTimeline({ events }: EventTimelineProps) {
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString();
+  };
+
+  const toggleEventExpansion = (eventId: string) => {
+    setExpandedEvents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId);
+      } else {
+        newSet.add(eventId);
+      }
+      return newSet;
+    });
+  };
+
+  const hasAIReasoning = (event: Event): boolean => {
+    return event.from === 'AI Analyzer' || event.from === 'Geo Intelligence' || 
+           (event.from === 'Tip Processor' && event.type === 'tip_received');
+  };
+
+  const renderAIReasoning = (event: Event) => {
+    if (!event.data) return null;
+
+    const data = event.data;
+    const reasoning = data.ai_reasoning;
+    const isExpanded = expandedEvents.has(event.id);
+
+    if (!reasoning || !Array.isArray(reasoning)) return null;
+
+    if (event.from === 'AI Analyzer') {
+      const factors = data.factors_considered || {};
+      return (
+        <div style={{ marginTop: '8px' }}>
+          <button
+            onClick={() => toggleEventExpansion(event.id)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              background: '#2a2a2a',
+              border: '1px solid #444',
+              borderRadius: '4px',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ fontWeight: 'bold', color: '#ffa500' }}>
+              🤖 AI Decision Reasoning {isExpanded ? '▼' : '▶'}
+            </span>
+          </button>
+          {isExpanded && (
+            <div
+              style={{
+                marginTop: '8px',
+                padding: '12px',
+                background: '#1a1a1a',
+                borderRadius: '4px',
+                border: '1px solid #ffa50040',
+              }}
+            >
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ color: '#ffa500', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.85rem' }}>
+                  Decision: Priority = {data.priority}
+                </div>
+                <div style={{ color: '#ccc', fontSize: '0.8rem', marginBottom: '12px' }}>
+                  <strong style={{ color: '#fff' }}>Reasoning:</strong>
+                  <ul style={{ marginTop: '6px', paddingLeft: '20px', lineHeight: '1.6' }}>
+                    {reasoning.map((reason: string, idx: number) => (
+                      <li key={idx} style={{ marginBottom: '4px' }}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              {Object.keys(factors).length > 0 && (
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #333' }}>
+                  <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '6px' }}>
+                    Factors Considered:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.75rem', color: '#999' }}>
+                    {Object.entries(factors).map(([key, value]) => (
+                      <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#aaa' }}>{key.replace(/_/g, ' ')}:</span>
+                        <span style={{ color: '#fff', fontWeight: 'bold' }}>{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (event.from === 'Geo Intelligence') {
+      const zoneDetails = data.zone_details || {};
+      return (
+        <div style={{ marginTop: '8px' }}>
+          <button
+            onClick={() => toggleEventExpansion(event.id)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              background: '#2a2a2a',
+              border: '1px solid #444',
+              borderRadius: '4px',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ fontWeight: 'bold', color: '#00aaff' }}>
+              🗺️ AI Decision Reasoning {isExpanded ? '▼' : '▶'}
+            </span>
+          </button>
+          {isExpanded && (
+            <div
+              style={{
+                marginTop: '8px',
+                padding: '12px',
+                background: '#1a1a1a',
+                borderRadius: '4px',
+                border: '1px solid #00aaff40',
+              }}
+            >
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ color: '#00aaff', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.85rem' }}>
+                  Decision: Created {Array.isArray(data.zones) ? data.zones.length : 0} Geofence Zones
+                </div>
+                <div style={{ color: '#ccc', fontSize: '0.8rem', marginBottom: '12px' }}>
+                  <strong style={{ color: '#fff' }}>Reasoning:</strong>
+                  <ul style={{ marginTop: '6px', paddingLeft: '20px', lineHeight: '1.6' }}>
+                    {reasoning.map((reason: string, idx: number) => (
+                      <li key={idx} style={{ marginBottom: '4px' }}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              {Object.keys(zoneDetails).length > 0 && (
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #333' }}>
+                  <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '8px' }}>
+                    Zone Details:
+                  </div>
+                  {Object.entries(zoneDetails).map(([zoneName, zoneInfo]: [string, any]) => (
+                    <div key={zoneName} style={{ marginBottom: '8px', padding: '8px', background: '#0a0a0a', borderRadius: '4px' }}>
+                      <div style={{ color: '#00aaff', fontWeight: 'bold', fontSize: '0.8rem', marginBottom: '4px' }}>
+                        {zoneName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '4px' }}>
+                        Priority: <span style={{ color: zoneInfo.priority === 'high' ? '#ffa500' : '#888' }}>{zoneInfo.priority.toUpperCase()}</span>
+                        {' • '}Radius: {zoneInfo.radius_km}km
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#aaa', fontStyle: 'italic' }}>
+                        {zoneInfo.reason}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (event.from === 'Tip Processor' && event.type === 'tip_received') {
+      const reasoning = data.ai_reasoning;
+      const factors = data.factors;
+      const isExpanded = expandedEvents.has(event.id);
+      const confidenceScore = data.confidence_score || 0;
+      const confidenceLevel = data.confidence || 'unknown';
+
+      if (!reasoning || !Array.isArray(reasoning)) return null;
+
+      return (
+        <div style={{ marginTop: '8px' }}>
+          <button
+            onClick={() => toggleEventExpansion(event.id)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              background: '#2a2a2a',
+              border: '1px solid #444',
+              borderRadius: '4px',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ fontWeight: 'bold', color: '#00ff00' }}>
+              🎯 Tip Confidence Analysis {isExpanded ? '▼' : '▶'}
+            </span>
+          </button>
+          {isExpanded && (
+            <div
+              style={{
+                marginTop: '8px',
+                padding: '12px',
+                background: '#1a1a1a',
+                borderRadius: '4px',
+                border: '1px solid #00ff0040',
+              }}
+            >
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ color: '#00ff00', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.85rem' }}>
+                  Decision: Confidence = {confidenceLevel.toUpperCase()} ({confidenceScore}%)
+                </div>
+                <div style={{ color: '#ccc', fontSize: '0.8rem', marginBottom: '12px' }}>
+                  <strong style={{ color: '#fff' }}>Reasoning:</strong>
+                  <ul style={{ marginTop: '6px', paddingLeft: '20px', lineHeight: '1.6' }}>
+                    {reasoning.map((reason: string, idx: number) => (
+                      <li key={idx} style={{ marginBottom: '4px' }}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              {factors && Object.keys(factors).length > 0 && (
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #333' }}>
+                  <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '6px' }}>
+                    Factors Analyzed:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.75rem', color: '#999' }}>
+                    {Object.entries(factors).map(([key, value]) => (
+                      <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#aaa' }}>{key.replace(/_/g, ' ')}:</span>
+                        <span style={{ 
+                          color: typeof value === 'string' && (value.toLowerCase() === 'yes' || value.toLowerCase() === 'true') 
+                            ? '#00ff00' 
+                            : typeof value === 'string' && (value.toLowerCase() === 'no' || value.toLowerCase() === 'false')
+                            ? '#ff6666'
+                            : '#fff',
+                          fontWeight: 'bold' 
+                        }}>
+                          {String(value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const formatEventData = (event: Event): string => {
@@ -176,19 +433,22 @@ export default function EventTimeline({ events }: EventTimelineProps) {
                 {event.to && <span style={{ marginLeft: '10px' }}>→ {event.to}</span>}
               </div>
               {event.data && (
-                <div
-                  style={{
-                    marginTop: '8px',
-                    padding: '8px',
-                    background: '#1a1a1a',
-                    borderRadius: '4px',
-                    fontSize: '0.8rem',
-                    color: '#ccc',
-                    lineHeight: '1.4',
-                  }}
-                >
-                  {formatEventData(event) || 'No details available'}
-                </div>
+                <>
+                  <div
+                    style={{
+                      marginTop: '8px',
+                      padding: '8px',
+                      background: '#1a1a1a',
+                      borderRadius: '4px',
+                      fontSize: '0.8rem',
+                      color: '#ccc',
+                      lineHeight: '1.4',
+                    }}
+                  >
+                    {formatEventData(event) || 'No details available'}
+                  </div>
+                  {hasAIReasoning(event) && renderAIReasoning(event)}
+                </>
               )}
             </div>
           ))
