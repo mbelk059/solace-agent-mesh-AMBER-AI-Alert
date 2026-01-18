@@ -9,6 +9,7 @@ interface EventTimelineProps {
 
 export default function EventTimeline({ events }: EventTimelineProps) {
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+  
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString();
@@ -43,60 +44,62 @@ export default function EventTimeline({ events }: EventTimelineProps) {
     if (event.from === 'AI Analyzer') {
       const factors = data.factors_considered || {};
       return (
-        <div style={{ marginTop: '8px' }}>
+        <div style={{ marginTop: '10px' }}>
           <button
             onClick={() => toggleEventExpansion(event.id)}
             style={{
               width: '100%',
-              padding: '8px',
-              background: '#2a2a2a',
-              border: '1px solid #444',
-              borderRadius: '4px',
-              color: '#fff',
+              padding: '10px 12px',
+              background: 'rgba(255, 165, 0, 0.08)',
+              border: '1px solid rgba(255, 165, 0, 0.3)',
+              borderRadius: '8px',
+              color: '#ffa500',
               cursor: 'pointer',
               fontSize: '0.75rem',
+              fontWeight: 600,
+              letterSpacing: '0.5px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              transition: 'all 0.2s ease',
             }}
           >
-            <span style={{ fontWeight: 'bold', color: '#ffa500' }}>
-              🤖 AI Decision Reasoning {isExpanded ? '▼' : '▶'}
-            </span>
+            <span>🤖 AI Decision Reasoning</span>
+            <span>{isExpanded ? '▼' : '▶'}</span>
           </button>
           {isExpanded && (
             <div
               style={{
-                marginTop: '8px',
-                padding: '12px',
-                background: '#1a1a1a',
-                borderRadius: '4px',
-                border: '1px solid #ffa50040',
+                marginTop: '10px',
+                padding: '14px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 165, 0, 0.2)',
               }}
             >
               <div style={{ marginBottom: '12px' }}>
-                <div style={{ color: '#ffa500', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.85rem' }}>
+                <div style={{ color: '#ffa500', fontWeight: 700, marginBottom: '8px', fontSize: '0.85rem', letterSpacing: '0.5px' }}>
                   Decision: Priority = {data.priority}
                 </div>
-                <div style={{ color: '#ccc', fontSize: '0.8rem', marginBottom: '12px' }}>
-                  <strong style={{ color: '#fff' }}>Reasoning:</strong>
-                  <ul style={{ marginTop: '6px', paddingLeft: '20px', lineHeight: '1.6' }}>
+                <div style={{ color: '#b8c8d0', fontSize: '0.78rem', marginBottom: '12px' }}>
+                  <strong style={{ color: '#e8f4f8' }}>Reasoning:</strong>
+                  <ul style={{ marginTop: '8px', paddingLeft: '20px', lineHeight: '1.6' }}>
                     {reasoning.map((reason: string, idx: number) => (
-                      <li key={idx} style={{ marginBottom: '4px' }}>{reason}</li>
+                      <li key={idx} style={{ marginBottom: '5px' }}>{reason}</li>
                     ))}
                   </ul>
                 </div>
               </div>
               {Object.keys(factors).length > 0 && (
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #333' }}>
-                  <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '6px' }}>
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <div style={{ color: '#8fa8b5', fontSize: '0.75rem', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.5px' }}>
                     Factors Considered:
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.75rem', color: '#999' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.72rem', color: '#6a7f8c' }}>
                     {Object.entries(factors).map(([key, value]) => (
                       <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#aaa' }}>{key.replace(/_/g, ' ')}:</span>
-                        <span style={{ color: '#fff', fontWeight: 'bold' }}>{String(value)}</span>
+                        <span style={{ color: '#8fa8b5' }}>{key.replace(/_/g, ' ')}:</span>
+                        <span style={{ color: '#e8f4f8', fontWeight: 700 }}>{String(value)}</span>
                       </div>
                     ))}
                   </div>
@@ -111,65 +114,67 @@ export default function EventTimeline({ events }: EventTimelineProps) {
     if (event.from === 'Geo Intelligence') {
       const zoneDetails = data.zone_details || {};
       return (
-        <div style={{ marginTop: '8px' }}>
+        <div style={{ marginTop: '10px' }}>
           <button
             onClick={() => toggleEventExpansion(event.id)}
             style={{
               width: '100%',
-              padding: '8px',
-              background: '#2a2a2a',
-              border: '1px solid #444',
-              borderRadius: '4px',
-              color: '#fff',
+              padding: '10px 12px',
+              background: 'rgba(0, 170, 255, 0.08)',
+              border: '1px solid rgba(0, 170, 255, 0.3)',
+              borderRadius: '8px',
+              color: '#00aaff',
               cursor: 'pointer',
               fontSize: '0.75rem',
+              fontWeight: 600,
+              letterSpacing: '0.5px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              transition: 'all 0.2s ease',
             }}
           >
-            <span style={{ fontWeight: 'bold', color: '#00aaff' }}>
-              🗺️ AI Decision Reasoning {isExpanded ? '▼' : '▶'}
-            </span>
+            <span>🗺️ AI Decision Reasoning</span>
+            <span>{isExpanded ? '▼' : '▶'}</span>
           </button>
           {isExpanded && (
             <div
               style={{
-                marginTop: '8px',
-                padding: '12px',
-                background: '#1a1a1a',
-                borderRadius: '4px',
-                border: '1px solid #00aaff40',
+                marginTop: '10px',
+                padding: '14px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '8px',
+                border: '1px solid rgba(0, 170, 255, 0.2)',
               }}
             >
               <div style={{ marginBottom: '12px' }}>
-                <div style={{ color: '#00aaff', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.85rem' }}>
+                <div style={{ color: '#00aaff', fontWeight: 700, marginBottom: '8px', fontSize: '0.85rem', letterSpacing: '0.5px' }}>
                   Decision: Created {Array.isArray(data.zones) ? data.zones.length : 0} Geofence Zones
                 </div>
-                <div style={{ color: '#ccc', fontSize: '0.8rem', marginBottom: '12px' }}>
-                  <strong style={{ color: '#fff' }}>Reasoning:</strong>
-                  <ul style={{ marginTop: '6px', paddingLeft: '20px', lineHeight: '1.6' }}>
+                <div style={{ color: '#b8c8d0', fontSize: '0.78rem', marginBottom: '12px' }}>
+                  <strong style={{ color: '#e8f4f8' }}>Reasoning:</strong>
+                  <ul style={{ marginTop: '8px', paddingLeft: '20px', lineHeight: '1.6' }}>
                     {reasoning.map((reason: string, idx: number) => (
-                      <li key={idx} style={{ marginBottom: '4px' }}>{reason}</li>
+                      <li key={idx} style={{ marginBottom: '5px' }}>{reason}</li>
                     ))}
                   </ul>
                 </div>
               </div>
               {Object.keys(zoneDetails).length > 0 && (
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #333' }}>
-                  <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '8px' }}>
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <div style={{ color: '#8fa8b5', fontSize: '0.75rem', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.5px' }}>
                     Zone Details:
                   </div>
                   {Object.entries(zoneDetails).map(([zoneName, zoneInfo]: [string, any]) => (
-                    <div key={zoneName} style={{ marginBottom: '8px', padding: '8px', background: '#0a0a0a', borderRadius: '4px' }}>
-                      <div style={{ color: '#00aaff', fontWeight: 'bold', fontSize: '0.8rem', marginBottom: '4px' }}>
+                    <div key={zoneName} style={{ marginBottom: '10px', padding: '10px', background: 'rgba(0, 0, 0, 0.4)', borderRadius: '8px' }}>
+                      <div style={{ color: '#00aaff', fontWeight: 700, fontSize: '0.8rem', marginBottom: '5px', letterSpacing: '0.4px' }}>
                         {zoneName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '4px' }}>
-                        Priority: <span style={{ color: zoneInfo.priority === 'high' ? '#ffa500' : '#888' }}>{zoneInfo.priority.toUpperCase()}</span>
+                      <div style={{ fontSize: '0.72rem', color: '#8fa8b5', marginBottom: '5px' }}>
+                        Priority: <span style={{ color: zoneInfo.priority === 'high' ? '#ffa500' : '#6a7f8c', fontWeight: 700 }}>{zoneInfo.priority.toUpperCase()}</span>
                         {' • '}Radius: {zoneInfo.radius_km}km
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#aaa', fontStyle: 'italic' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#b8c8d0', fontStyle: 'italic' }}>
                         {zoneInfo.reason}
                       </div>
                     </div>
@@ -183,75 +188,73 @@ export default function EventTimeline({ events }: EventTimelineProps) {
     }
 
     if (event.from === 'Tip Processor' && event.type === 'tip_received') {
-      const reasoning = data.ai_reasoning;
       const factors = data.factors;
-      const isExpanded = expandedEvents.has(event.id);
       const confidenceScore = data.confidence_score || 0;
       const confidenceLevel = data.confidence || 'unknown';
 
-      if (!reasoning || !Array.isArray(reasoning)) return null;
-
       return (
-        <div style={{ marginTop: '8px' }}>
+        <div style={{ marginTop: '10px' }}>
           <button
             onClick={() => toggleEventExpansion(event.id)}
             style={{
               width: '100%',
-              padding: '8px',
-              background: '#2a2a2a',
-              border: '1px solid #444',
-              borderRadius: '4px',
-              color: '#fff',
+              padding: '10px 12px',
+              background: 'rgba(0, 255, 0, 0.08)',
+              border: '1px solid rgba(0, 255, 0, 0.3)',
+              borderRadius: '8px',
+              color: '#00ff00',
               cursor: 'pointer',
               fontSize: '0.75rem',
+              fontWeight: 600,
+              letterSpacing: '0.5px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              transition: 'all 0.2s ease',
             }}
           >
-            <span style={{ fontWeight: 'bold', color: '#00ff00' }}>
-              🎯 Tip Confidence Analysis {isExpanded ? '▼' : '▶'}
-            </span>
+            <span>🎯 Tip Confidence Analysis</span>
+            <span>{isExpanded ? '▼' : '▶'}</span>
           </button>
           {isExpanded && (
             <div
               style={{
-                marginTop: '8px',
-                padding: '12px',
-                background: '#1a1a1a',
-                borderRadius: '4px',
-                border: '1px solid #00ff0040',
+                marginTop: '10px',
+                padding: '14px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '8px',
+                border: '1px solid rgba(0, 255, 0, 0.2)',
               }}
             >
               <div style={{ marginBottom: '12px' }}>
-                <div style={{ color: '#00ff00', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.85rem' }}>
+                <div style={{ color: '#00ff00', fontWeight: 700, marginBottom: '8px', fontSize: '0.85rem', letterSpacing: '0.5px' }}>
                   Decision: Confidence = {confidenceLevel.toUpperCase()} ({confidenceScore}%)
                 </div>
-                <div style={{ color: '#ccc', fontSize: '0.8rem', marginBottom: '12px' }}>
-                  <strong style={{ color: '#fff' }}>Reasoning:</strong>
-                  <ul style={{ marginTop: '6px', paddingLeft: '20px', lineHeight: '1.6' }}>
+                <div style={{ color: '#b8c8d0', fontSize: '0.78rem', marginBottom: '12px' }}>
+                  <strong style={{ color: '#e8f4f8' }}>Reasoning:</strong>
+                  <ul style={{ marginTop: '8px', paddingLeft: '20px', lineHeight: '1.6' }}>
                     {reasoning.map((reason: string, idx: number) => (
-                      <li key={idx} style={{ marginBottom: '4px' }}>{reason}</li>
+                      <li key={idx} style={{ marginBottom: '5px' }}>{reason}</li>
                     ))}
                   </ul>
                 </div>
               </div>
               {factors && Object.keys(factors).length > 0 && (
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #333' }}>
-                  <div style={{ color: '#aaa', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '6px' }}>
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <div style={{ color: '#8fa8b5', fontSize: '0.75rem', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.5px' }}>
                     Factors Analyzed:
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.75rem', color: '#999' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.72rem', color: '#6a7f8c' }}>
                     {Object.entries(factors).map(([key, value]) => (
                       <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#aaa' }}>{key.replace(/_/g, ' ')}:</span>
+                        <span style={{ color: '#8fa8b5' }}>{key.replace(/_/g, ' ')}:</span>
                         <span style={{ 
                           color: typeof value === 'string' && (value.toLowerCase() === 'yes' || value.toLowerCase() === 'true') 
                             ? '#00ff00' 
                             : typeof value === 'string' && (value.toLowerCase() === 'no' || value.toLowerCase() === 'false')
                             ? '#ff6666'
-                            : '#fff',
-                          fontWeight: 'bold' 
+                            : '#e8f4f8',
+                          fontWeight: 700
                         }}>
                           {String(value)}
                         </span>
@@ -380,13 +383,11 @@ export default function EventTimeline({ events }: EventTimelineProps) {
         return recoveryParts.join(' • ') || 'Agent recovered';
 
       default:
-        // For unknown event types, try to format common fields
         const defaultParts = [];
         if (data.status) defaultParts.push(`Status: ${data.status}`);
         if (data.message) defaultParts.push(data.message);
         if (data.error) defaultParts.push(`Error: ${data.error}`);
         if (defaultParts.length === 0 && typeof data === 'object') {
-          // Last resort: show first few key-value pairs
           const entries = Object.entries(data).slice(0, 3);
           return entries.map(([key, value]) => {
             const val = typeof value === 'string' && value.length > 30 
@@ -400,12 +401,45 @@ export default function EventTimeline({ events }: EventTimelineProps) {
   };
 
   return (
-    <div style={{ background: '#1a1a1a', borderRadius: '8px', padding: '20px', maxHeight: '600px', overflowY: 'auto' }}>
-      <h2 style={{ marginBottom: '20px', fontSize: '1.5rem' }}>Event Timeline</h2>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div
+      style={{
+        background: 'linear-gradient(145deg, #0a0e10 0%, #121619 100%)',
+        border: '1px solid rgba(47, 227, 208, 0.2)',
+        borderRadius: '16px',
+        padding: '28px 32px',
+        maxHeight: '600px',
+        overflowY: 'auto',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+      }}
+    >
+      <h2
+        style={{
+          marginBottom: '24px',
+          fontSize: '1.1rem',
+          fontWeight: 700,
+          color: '#e8f4f8',
+          letterSpacing: '1.2px',
+          textTransform: 'uppercase',
+          background: 'linear-gradient(135deg, #2fe3d0 0%, #a0d8f1 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}
+      >
+        Event Timeline
+      </h2>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {events.length === 0 ? (
-          <div style={{ color: '#666', textAlign: 'center', padding: '40px' }}>
+          <div
+            style={{
+              color: '#6a7f8c',
+              textAlign: 'center',
+              padding: '48px 20px',
+              fontSize: '0.85rem',
+              letterSpacing: '0.5px',
+            }}
+          >
             No events yet. Trigger an alert to start the simulation.
           </div>
         ) : (
@@ -413,36 +447,71 @@ export default function EventTimeline({ events }: EventTimelineProps) {
             <div
               key={`${event.id}-${event.timestamp}-${idx}`}
               style={{
-                background: '#2a2a2a',
-                borderLeft: `4px solid ${event.color}`,
-                padding: '12px',
-                borderRadius: '4px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                borderLeft: `3px solid ${event.color}`,
+                padding: '14px 16px',
+                borderRadius: '10px',
                 fontSize: '0.85rem',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                <span style={{ fontWeight: 'bold', color: event.color }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px',
+                  alignItems: 'center',
+                }}
+              >
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color: event.color,
+                    letterSpacing: '0.5px',
+                    fontSize: '0.85rem',
+                  }}
+                >
                   {event.type}
                 </span>
-                <span style={{ color: '#888', fontSize: '0.75rem' }}>
+                <span
+                  style={{
+                    color: '#6a7f8c',
+                    fontSize: '0.72rem',
+                    letterSpacing: '0.3px',
+                    fontWeight: 600,
+                  }}
+                >
                   {formatTime(event.timestamp)}
                 </span>
               </div>
-              <div style={{ color: '#aaa', fontSize: '0.8rem' }}>
+
+              <div
+                style={{
+                  color: '#8fa8b5',
+                  fontSize: '0.78rem',
+                  letterSpacing: '0.4px',
+                }}
+              >
                 {event.from && <span>From: {event.from}</span>}
-                {event.to && <span style={{ marginLeft: '10px' }}>→ {event.to}</span>}
+                {event.to && (
+                  <span style={{ marginLeft: '12px' }}>→ {event.to}</span>
+                )}
               </div>
+
               {event.data && (
                 <>
                   <div
                     style={{
-                      marginTop: '8px',
-                      padding: '8px',
-                      background: '#1a1a1a',
-                      borderRadius: '4px',
-                      fontSize: '0.8rem',
-                      color: '#ccc',
-                      lineHeight: '1.4',
+                      marginTop: '10px',
+                      padding: '10px 12px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      color: '#b8c8d0',
+                      lineHeight: '1.5',
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      letterSpacing: '0.3px',
                     }}
                   >
                     {formatEventData(event) || 'No details available'}

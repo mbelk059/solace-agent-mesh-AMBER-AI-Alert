@@ -4,22 +4,12 @@ import { useEffect, useState } from 'react';
 import AgentVisualization from './components/AgentVisualization';
 import EventTimeline from './components/EventTimeline';
 import Controls from './components/Controls';
-import AlertCard from './components/AlertCard';
 
 export interface AgentStatus {
   name: string;
   status: 'idle' | 'processing' | 'success' | 'error' | 'failed';
   lastEvent?: string;
   lastUpdate?: number;
-}
-
-export interface Alert {
-  alert_id: string;
-  status: 'active' | 'resolved';
-  agents: Record<string, AgentStatus>;
-  events: Event[];
-  createdAt: number;
-  resolvedAt?: number;
 }
 
 export interface Event {
@@ -30,25 +20,42 @@ export interface Event {
   to?: string;
   data?: any;
   color: string;
-  alert_id?: string; // Track which alert this event belongs to
+}
+
+interface AlertInstance {
+  id: string;
+  alertId: string;
+  agents: Record<string, AgentStatus>;
+  events: Event[];
+  createdAt: number;
+  resolvedAt?: number;
 }
 
 export default function Home() {
-  const [alerts, setAlerts] = useState<Record<string, Alert>>({});
+  const [alertInstances, setAlertInstances] = useState<AlertInstance[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
 
-  // Initialize default agent statuses
-  const getDefaultAgents = (): Record<string, AgentStatus> => ({
-    'Alert Receiver': { name: 'Alert Receiver', status: 'idle' },
-    'AI Analyzer': { name: 'AI Analyzer', status: 'idle' },
-    'Broadcast Agent': { name: 'Broadcast Agent', status: 'idle' },
-    'Camera Agent': { name: 'Camera Agent', status: 'idle' },
-    'Tip Processor': { name: 'Tip Processor', status: 'idle' },
-    'Geo Intelligence': { name: 'Geo Intelligence', status: 'idle' },
-  });
+  const createNewInstance = (): AlertInstance => {
+    const timestamp = Date.now();
+    const alertId = `AMBER-CA-2026-001-${timestamp}`;
+    
+    return {
+      id: `alert-${timestamp}-${Math.random()}`,
+      alertId: alertId,
+      createdAt: timestamp,
+      agents: {
+        'Alert Receiver': { name: 'Alert Receiver', status: 'idle' },
+        'AI Analyzer': { name: 'AI Analyzer', status: 'idle' },
+        'Broadcast Agent': { name: 'Broadcast Agent', status: 'idle' },
+        'Camera Agent': { name: 'Camera Agent', status: 'idle' },
+        'Tip Processor': { name: 'Tip Processor', status: 'idle' },
+        'Geo Intelligence': { name: 'Geo Intelligence', status: 'idle' },
+      },
+      events: [],
+    };
+  };
 
   useEffect(() => {
-    // Connect to event stream
     console.log('Connecting to event stream...');
     const eventSource = new EventSource('/api/events');
     
@@ -58,7 +65,6 @@ export default function Home() {
     
     eventSource.onmessage = (e) => {
       try {
-        // SSE format: "data: {...}\n\n"
         const data = e.data.trim();
         if (!data) return;
         
@@ -72,10 +78,8 @@ export default function Home() {
 
     eventSource.onerror = (error) => {
       console.error('Event stream error:', error);
-      // Try to reconnect after a delay
       setTimeout(() => {
         eventSource.close();
-        // The useEffect will recreate the connection
       }, 3000);
     };
 
@@ -86,132 +90,41 @@ export default function Home() {
   }, []);
 
   const handleEvent = (event: Event) => {
-    // Skip system events that don't belong to a specific alert
-    if (event.type === 'connected' || event.type === 'simulation_reset') {
-      return;
-    }
-    
-    // Handle failure/recovery events specially - they can work without alert_id
-    const isFailureEvent = event.type === 'agent_failed' || event.type === 'agent_recovered';
-    
-    setAlerts((prev) => {
-      const updated = { ...prev };
+    setAlertInstances((prev) => {
+      if (prev.length === 0) return prev;
       
-      // For failure/recovery events without alert_id, apply to all active alerts
-      if (isFailureEvent && !event.alert_id && !event.data?.alert_id) {
-        const activeAlerts = Object.values(updated).filter(a => a.status === 'active');
-        
-        if (activeAlerts.length === 0) {
-          // No active alerts, find most recent alert (even if resolved)
-          const allAlerts = Object.values(updated);
-          if (allAlerts.length > 0) {
-            const mostRecent = allAlerts.sort((a, b) => b.createdAt - a.createdAt)[0];
-            const alertId = mostRecent.alert_id;
-            const alert = updated[alertId];
-            
-            if (alert && event.from && alert.agents[event.from]) {
-              const newStatus: AgentStatus['status'] = event.type === 'agent_failed' ? 'error' : 'success';
-              alert.agents[event.from] = {
-                ...alert.agents[event.from],
-                status: newStatus,
-                lastEvent: event.type,
-                lastUpdate: Date.now(),
-              };
-              
-              // Add event to alert's event list
-              const eventExists = alert.events.some(e => e.id === event.id && e.timestamp === event.timestamp);
-              if (!eventExists) {
-                alert.events = [{ ...event, alert_id: alertId }, ...alert.events].slice(0, 100);
-              }
-            }
-          }
-        } else {
-          // Apply to all active alerts
-          activeAlerts.forEach((alert) => {
-            if (event.from && alert.agents[event.from]) {
-              const newStatus: AgentStatus['status'] = event.type === 'agent_failed' ? 'error' : 'success';
-              alert.agents[event.from] = {
-                ...alert.agents[event.from],
-                status: newStatus,
-                lastEvent: event.type,
-                lastUpdate: Date.now(),
-              };
-              
-              // Add event to alert's event list
-              const eventExists = alert.events.some(e => e.id === event.id && e.timestamp === event.timestamp);
-              if (!eventExists) {
-                alert.events = [{ ...event, alert_id: alert.alert_id }, ...alert.events].slice(0, 100);
-              }
-            }
-          });
-        }
-        
-        return { ...updated };
-      }
+      const updated = [...prev];
+      const latestIndex = updated.length - 1;
+      const latest = { ...updated[latestIndex] };
       
-      // For other events, require alert_id
-      const alertId = event.alert_id || event.data?.alert_id;
-      if (!alertId) {
-        console.warn('[Frontend] Event missing alert_id:', event.type);
-        return updated;
-      }
+      latest.events = [event, ...latest.events].slice(0, 100);
       
-      // Create alert if it doesn't exist
-      if (!updated[alertId]) {
-        updated[alertId] = {
-          alert_id: alertId,
-          status: 'active',
-          agents: getDefaultAgents(),
-          events: [],
-          createdAt: event.timestamp,
-        };
-      }
+      const updatedAgents = { ...latest.agents };
       
-      const alert = updated[alertId];
-      
-      // Don't add events to resolved alerts (except the resolution event itself)
-      if (alert.status === 'resolved' && event.type !== 'alert_resolved') {
-        console.warn('[Frontend] Ignoring event for resolved alert:', event.type, alertId);
-        return updated;
-      }
-      
-      // Check if event already exists (prevent duplicates)
-      const eventExists = alert.events.some(e => e.id === event.id && e.timestamp === event.timestamp);
-      if (eventExists) {
-        console.warn('[Frontend] Duplicate event ignored:', event.id);
-        return updated;
-      }
-      
-      // Add event to alert's event list
-      alert.events = [event, ...alert.events].slice(0, 100);
-      
-      // Update agent status based on event
-      if (event.from && alert.agents[event.from]) {
+      if (event.from && updatedAgents[event.from]) {
         let newStatus: AgentStatus['status'] = 'processing';
         if (event.type.includes('error') || event.type.includes('failed')) {
           newStatus = 'error';
         } else if (event.type.includes('success') || event.type.includes('completed') || 
                    event.type.includes('initiated') || event.type.includes('created') ||
                    event.type.includes('assessed') || event.type.includes('received') ||
-                   event.type.includes('resolved') || event.type.includes('recovered')) {
+                   event.type.includes('resolved')) {
           newStatus = 'success';
         }
         
-        alert.agents[event.from] = {
-          ...alert.agents[event.from],
+        updatedAgents[event.from] = {
+          ...updatedAgents[event.from],
           status: newStatus,
           lastEvent: event.type,
           lastUpdate: Date.now(),
         };
       }
 
-      // Special handling for resolution event
       if (event.type === 'alert_resolved') {
-        alert.status = 'resolved';
-        alert.resolvedAt = event.timestamp;
-        Object.keys(alert.agents).forEach((agentName) => {
-          alert.agents[agentName] = {
-            ...alert.agents[agentName],
+        latest.resolvedAt = Date.now();
+        Object.keys(updatedAgents).forEach((agentName) => {
+          updatedAgents[agentName] = {
+            ...updatedAgents[agentName],
             status: 'success',
             lastEvent: 'Alert Resolved',
             lastUpdate: Date.now(),
@@ -219,20 +132,26 @@ export default function Home() {
         });
       }
 
-      if (event.to && alert.agents[event.to]) {
-        alert.agents[event.to] = {
-          ...alert.agents[event.to],
+      if (event.to && updatedAgents[event.to]) {
+        updatedAgents[event.to] = {
+          ...updatedAgents[event.to],
           status: 'processing',
           lastEvent: `Received: ${event.type}`,
           lastUpdate: Date.now(),
         };
       }
 
-      return { ...updated };
+      latest.agents = updatedAgents;
+      updated[latestIndex] = latest;
+      
+      return updated;
     });
   };
 
   const triggerAlert = async () => {
+    const newInstance = createNewInstance();
+    setAlertInstances((prev) => [...prev, newInstance]);
+    
     setIsSimulating(true);
     try {
       console.log('Triggering alert...');
@@ -270,64 +189,220 @@ export default function Home() {
       });
       if (!response.ok) throw new Error('Failed to reset');
       
-      setAlerts({});
+      setAlertInstances([]);
     } catch (error) {
       console.error('Error resetting:', error);
     }
   };
 
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
-    <main style={{ minHeight: '100vh', padding: '20px' }}>
-      <div style={{ marginBottom: '30px' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#fff' }}>
-          AMBER Alert Simulation
-        </h1>
-        <p style={{ color: '#888', fontSize: '1.1rem' }}>
-          Event-driven multi-agent AI system demonstrating real-time coordination
+    <main
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #05080a 0%, #0d1215 100%)',
+        padding: '32px 40px',
+      }}
+    >
+      {/* HEADER */}
+      <header
+        style={{
+          marginBottom: '32px',
+          borderBottom: '1px solid rgba(47, 227, 208, 0.15)',
+          paddingBottom: '24px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '12px',
+          }}
+        >
+          <h1
+            style={{
+              fontSize: '2rem',
+              fontWeight: 800,
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase',
+              background: 'linear-gradient(135deg, #2fe3d0 0%, #a0d8f1 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            AMBER Alert Simulation
+          </h1>
+
+          <div
+            style={{
+              padding: '10px 20px',
+              background: isSimulating
+                ? 'linear-gradient(135deg, rgba(47, 227, 208, 0.2) 0%, rgba(160, 216, 241, 0.15) 100%)'
+                : 'rgba(255, 255, 255, 0.04)',
+              border: isSimulating
+                ? '1px solid rgba(47, 227, 208, 0.5)'
+                : '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '10px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              color: isSimulating ? '#2fe3d0' : '#8fa8b5',
+              boxShadow: isSimulating
+                ? '0 0 20px rgba(47, 227, 208, 0.3)'
+                : 'none',
+              transition: 'all 0.3s ease',
+            }}
+          >
+            {isSimulating ? 'System Active' : 'System Idle'}
+          </div>
+        </div>
+
+        <p
+          style={{
+            color: '#8fa8b5',
+            fontSize: '0.95rem',
+            letterSpacing: '0.5px',
+            lineHeight: '1.5',
+          }}
+        >
+          Event-driven multi-agent AI system demonstrating real-time emergency coordination
         </p>
-      </div>
+      </header>
 
-      <Controls
-        onTriggerAlert={triggerAlert}
-        onSimulateFailure={simulateFailure}
-        onReset={resetSimulation}
-        isSimulating={isSimulating}
-        agentNames={Object.keys(getDefaultAgents())}
-      />
+      {/* CONTROLS */}
+      <section style={{ marginBottom: '32px' }}>
+        <Controls
+          onTriggerAlert={triggerAlert}
+          onSimulateFailure={simulateFailure}
+          onReset={resetSimulation}
+          isSimulating={isSimulating}
+          agentNames={alertInstances.length > 0 ? Object.keys(alertInstances[0].agents) : []}
+        />
+      </section>
 
-      {Object.keys(alerts).length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '60px 20px', 
-          color: '#666',
-          background: '#1a1a1a',
-          borderRadius: '8px',
-          marginTop: '30px'
-        }}>
-          <p style={{ fontSize: '1.2rem', marginBottom: '10px' }}>No active alerts</p>
-          <p style={{ fontSize: '0.9rem' }}>Click "Trigger AMBER Alert" to start tracking an alert</p>
+      {/* ALERT INSTANCES */}
+      {alertInstances.length === 0 ? (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '80px 20px',
+            color: '#6a7f8c',
+            fontSize: '0.95rem',
+            letterSpacing: '0.5px',
+          }}
+        >
+          No active alerts. Click "Trigger AMBER Alert" to start a simulation.
         </div>
       ) : (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(600px, 1fr))', 
-          gap: '20px', 
-          marginTop: '30px' 
-        }}>
-          {Object.values(alerts).map((alert) => (
-            <AlertCard 
-              key={alert.alert_id} 
-              alert={alert}
-              onRemove={(alertId) => {
-                setAlerts((prev) => {
-                  const updated = { ...prev };
-                  delete updated[alertId];
-                  return updated;
-                });
+        <section
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(900px, 1fr))',
+            gap: '24px',
+          }}
+        >
+          {alertInstances.map((instance) => (
+            <div
+              key={instance.id}
+              style={{
+                background: 'linear-gradient(145deg, #0a0e10 0%, #121619 100%)',
+                border: '1px solid rgba(47, 227, 208, 0.2)',
+                borderRadius: '16px',
+                padding: '24px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
               }}
-            />
+            >
+              {/* ALERT HEADER */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '20px',
+                  paddingBottom: '16px',
+                  borderBottom: '1px solid rgba(47, 227, 208, 0.15)',
+                }}
+              >
+                <div>
+                  <h3
+                    style={{
+                      fontSize: '1.1rem',
+                      fontWeight: 700,
+                      color: '#e8f4f8',
+                      letterSpacing: '0.8px',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    {instance.alertId}
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: '#6a7f8c', letterSpacing: '0.3px' }}>
+                    Created: {formatTimestamp(instance.createdAt)}
+                    {instance.resolvedAt && (
+                      <span style={{ marginLeft: '16px' }}>
+                        Resolved: {formatTimestamp(instance.resolvedAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {instance.resolvedAt && (
+                  <div
+                    style={{
+                      padding: '8px 16px',
+                      background: 'rgba(0, 255, 0, 0.15)',
+                      border: '1px solid rgba(0, 255, 0, 0.4)',
+                      borderRadius: '8px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.8px',
+                      textTransform: 'uppercase',
+                      color: '#00ff00',
+                    }}
+                  >
+                    Resolved
+                  </div>
+                )}
+              </div>
+
+              {/* AGENT NETWORK AND EVENT TIMELINE SIDE BY SIDE */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '20px',
+                }}
+              >
+                <AgentVisualization
+                  agents={instance.agents}
+                  events={instance.events.slice(0, 20)}
+                />
+                <EventTimeline events={instance.events} />
+              </div>
+
+              {/* FOOTER */}
+              <div
+                style={{
+                  marginTop: '16px',
+                  paddingTop: '16px',
+                  borderTop: '1px solid rgba(47, 227, 208, 0.15)',
+                  textAlign: 'center',
+                  fontSize: '0.75rem',
+                  color: '#6a7f8c',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                {instance.events.length} events tracked
+              </div>
+            </div>
           ))}
-        </div>
+        </section>
       )}
     </main>
   );

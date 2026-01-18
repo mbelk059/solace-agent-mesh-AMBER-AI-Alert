@@ -23,7 +23,10 @@ const statusLabels: Record<string, string> = {
   failed: 'Failed',
 };
 
-export default function AgentVisualization({ agents, events }: AgentVisualizationProps) {
+export default function AgentVisualization({
+  agents,
+  events,
+}: AgentVisualizationProps) {
   const agentNames = Object.keys(agents);
 
   // Calculate connections between agents based on recent events
@@ -35,8 +38,31 @@ export default function AgentVisualization({ agents, events }: AgentVisualizatio
   });
 
   return (
-    <div style={{ background: '#1a1a1a', borderRadius: '8px', padding: '20px' }}>
-      <h2 style={{ marginBottom: '20px', fontSize: '1.5rem' }}>Agent Network</h2>
+    <div
+      style={{
+        background: 'linear-gradient(145deg, #0a0e10 0%, #121619 100%)',
+        border: '1px solid rgba(47, 227, 208, 0.2)',
+        borderRadius: '16px',
+        padding: '28px 32px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+      }}
+    >
+      <h2
+        style={{
+          marginBottom: '24px',
+          fontSize: '1.1rem',
+          fontWeight: 700,
+          color: '#e8f4f8',
+          letterSpacing: '1.2px',
+          textTransform: 'uppercase',
+          background: 'linear-gradient(135deg, #2fe3d0 0%, #a0d8f1 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}
+      >
+        Agent Network
+      </h2>
       
       <div
         style={{
@@ -56,7 +82,7 @@ export default function AgentVisualization({ agents, events }: AgentVisualizatio
             width: '100%',
             height: '100%',
             pointerEvents: 'none',
-            zIndex: 1,
+            zIndex: 0,
           }}
         >
           {connections.slice(0, 10).map((conn, idx) => {
@@ -109,40 +135,71 @@ export default function AgentVisualization({ agents, events }: AgentVisualizatio
             >
               <div
                 style={{
-                  background: '#2a2a2a',
-                  border: `3px solid ${statusColor}`,
-                  borderRadius: '8px',
-                  padding: '15px',
-                  minHeight: '120px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: agent.status === 'processing' ? `0 0 20px ${statusColor}40` : 'none',
+                  background: 'linear-gradient(145deg, #0a0e10 0%, #121619 100%)',
+                  border: `2px solid ${statusColor}`,
+                  borderRadius: '12px',
+                  padding: '18px 20px',
+                  minHeight: '140px',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow:
+                    agent.status === 'processing'
+                      ? `0 8px 32px ${statusColor}60, 0 0 40px ${statusColor}30`
+                      : '0 4px 16px rgba(0, 0, 0, 0.4)',
                   animation: agent.status === 'processing' ? 'pulse 2s infinite' : 'none',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginBottom: '12px',
+                  }}
+                >
                   <div
                     style={{
-                      width: '12px',
-                      height: '12px',
+                      width: '10px',
+                      height: '10px',
                       borderRadius: '50%',
                       background: statusColor,
-                      marginRight: '8px',
-                      boxShadow: `0 0 8px ${statusColor}`,
+                      marginRight: '10px',
+                      boxShadow: `0 0 12px ${statusColor}`,
                     }}
                   />
-                  <h3 style={{ fontSize: '1rem', fontWeight: 'bold' }}>{name}</h3>
+                  <h3
+                    style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.8px',
+                      textTransform: 'uppercase',
+                      color: '#e8f4f8',
+                    }}
+                  >
+                    {name}
+                  </h3>
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: '5px' }}>
+                
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    color: '#8fa8b5',
+                    marginBottom: '8px',
+                    fontWeight: 600,
+                    letterSpacing: '0.5px',
+                  }}
+                >
                   {statusLabels[agent.status]}
                 </div>
+                
                 {agent.lastEvent && (
                   <div
                     style={{
-                      fontSize: '0.75rem',
-                      color: '#888',
-                      marginTop: '8px',
-                      paddingTop: '8px',
-                      borderTop: '1px solid #333',
+                      fontSize: '0.72rem',
+                      color: '#6a7f8c',
+                      marginTop: '10px',
+                      paddingTop: '10px',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                      lineHeight: '1.4',
+                      letterSpacing: '0.3px',
                     }}
                   >
                     {agent.lastEvent}
