@@ -34,6 +34,7 @@ interface AlertInstance {
 export default function Home() {
   const [alertInstances, setAlertInstances] = useState<AlertInstance[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [samStatus, setSamStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
 
   const createNewInstance = (): AlertInstance => {
     const timestamp = Date.now();
@@ -54,6 +55,32 @@ export default function Home() {
       events: [],
     };
   };
+
+  // Check SAM health periodically
+  useEffect(() => {
+    const checkSAMHealth = async () => {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        if (data.sam_running) {
+          setSamStatus('connected');
+        } else {
+          setSamStatus('disconnected');
+        }
+      } catch (error) {
+        console.error('SAM health check failed:', error);
+        setSamStatus('disconnected');
+      }
+    };
+
+    // Check immediately
+    checkSAMHealth();
+
+    // Then check every 5 seconds
+    const interval = setInterval(checkSAMHealth, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     console.log('Connecting to event stream...');
@@ -94,12 +121,48 @@ export default function Home() {
       if (prev.length === 0) return prev;
       
       const updated = [...prev];
-      const latestIndex = updated.length - 1;
-      const latest = { ...updated[latestIndex] };
       
-      latest.events = [event, ...latest.events].slice(0, 100);
+      // Handle failure/recovery events - apply to ALL active alerts
+      const isFailureEvent = event.type === 'agent_failed' || event.type === 'agent_recovered';
       
-      const updatedAgents = { ...latest.agents };
+      if (isFailureEvent && event.from) {
+        // Apply failure/recovery to all alert instances
+        updated.forEach((instance) => {
+          if (instance.agents[event.from]) {
+            const newStatus: AgentStatus['status'] = event.type === 'agent_failed' ? 'error' : 'success';
+            instance.agents[event.from] = {
+              ...instance.agents[event.from],
+              status: newStatus,
+              lastEvent: event.type,
+              lastUpdate: Date.now(),
+            };
+            // Add event to this instance's event list
+            instance.events = [event, ...instance.events].slice(0, 100);
+          }
+        });
+        return updated;
+      }
+      
+      // For other events, find the matching alert by alert_id or apply to latest
+      const alertId = event.alert_id || event.data?.alert_id;
+      let targetIndex = -1;
+      
+      if (alertId) {
+        // Try to find alert by ID
+        targetIndex = updated.findIndex(inst => inst.alertId === alertId);
+      }
+      
+      // If not found by ID, use latest (for backward compatibility)
+      if (targetIndex === -1) {
+        targetIndex = updated.length - 1;
+      }
+      
+      if (targetIndex === -1 || targetIndex >= updated.length) return prev;
+      
+      const target = { ...updated[targetIndex] };
+      target.events = [event, ...target.events].slice(0, 100);
+      
+      const updatedAgents = { ...target.agents };
       
       if (event.from && updatedAgents[event.from]) {
         let newStatus: AgentStatus['status'] = 'processing';
@@ -108,7 +171,7 @@ export default function Home() {
         } else if (event.type.includes('success') || event.type.includes('completed') || 
                    event.type.includes('initiated') || event.type.includes('created') ||
                    event.type.includes('assessed') || event.type.includes('received') ||
-                   event.type.includes('resolved')) {
+                   event.type.includes('resolved') || event.type.includes('recovered')) {
           newStatus = 'success';
         }
         
@@ -121,7 +184,7 @@ export default function Home() {
       }
 
       if (event.type === 'alert_resolved') {
-        latest.resolvedAt = Date.now();
+        target.resolvedAt = Date.now();
         Object.keys(updatedAgents).forEach((agentName) => {
           updatedAgents[agentName] = {
             ...updatedAgents[agentName],
@@ -141,14 +204,20 @@ export default function Home() {
         };
       }
 
-      latest.agents = updatedAgents;
-      updated[latestIndex] = latest;
+      target.agents = updatedAgents;
+      updated[targetIndex] = target;
       
       return updated;
     });
   };
 
   const triggerAlert = async () => {
+    // Don't allow triggering if SAM is not running
+    if (samStatus !== 'connected') {
+      alert('SAM backend is not running. Please start SAM with: uv run sam run configs/\n\nThen refresh this page.');
+      return;
+    }
+
     const newInstance = createNewInstance();
     setAlertInstances((prev) => [...prev, newInstance]);
     
@@ -160,10 +229,16 @@ export default function Home() {
       });
       const data = await response.json();
       console.log('Trigger alert response:', data);
-      if (!response.ok) throw new Error(data.error || 'Failed to trigger alert');
-    } catch (error) {
+      if (!response.ok) {
+        if (data.sam_running === false) {
+          setSamStatus('disconnected');
+          throw new Error('SAM backend disconnected. Please ensure SAM is running.');
+        }
+        throw new Error(data.error || 'Failed to trigger alert');
+      }
+    } catch (error: any) {
       console.error('Error triggering alert:', error);
-      alert('Failed to trigger alert. Check console for details.');
+      alert(error.message || 'Failed to trigger alert. Check console for details.');
     } finally {
       setTimeout(() => setIsSimulating(false), 1000);
     }
@@ -239,28 +314,60 @@ export default function Home() {
             AMBER Alert Simulation
           </h1>
 
-          <div
-            style={{
-              padding: '10px 20px',
-              background: isSimulating
-                ? 'linear-gradient(135deg, rgba(47, 227, 208, 0.2) 0%, rgba(160, 216, 241, 0.15) 100%)'
-                : 'rgba(255, 255, 255, 0.04)',
-              border: isSimulating
-                ? '1px solid rgba(47, 227, 208, 0.5)'
-                : '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '10px',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-              color: isSimulating ? '#2fe3d0' : '#8fa8b5',
-              boxShadow: isSimulating
-                ? '0 0 20px rgba(47, 227, 208, 0.3)'
-                : 'none',
-              transition: 'all 0.3s ease',
-            }}
-          >
-            {isSimulating ? 'System Active' : 'System Idle'}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* SAM Status Indicator */}
+            <div
+              style={{
+                padding: '10px 20px',
+                background: samStatus === 'connected'
+                  ? 'rgba(0, 255, 0, 0.1)'
+                  : samStatus === 'disconnected'
+                  ? 'rgba(255, 0, 0, 0.1)'
+                  : 'rgba(255, 255, 0, 0.1)',
+                border: samStatus === 'connected'
+                  ? '1px solid rgba(0, 255, 0, 0.4)'
+                  : samStatus === 'disconnected'
+                  ? '1px solid rgba(255, 0, 0, 0.4)'
+                  : '1px solid rgba(255, 255, 0, 0.4)',
+                borderRadius: '10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                color: samStatus === 'connected'
+                  ? '#00ff00'
+                  : samStatus === 'disconnected'
+                  ? '#ff4444'
+                  : '#ffaa00',
+              }}
+            >
+              SAM: {samStatus === 'connected' ? 'Connected' : samStatus === 'disconnected' ? 'Disconnected' : 'Checking...'}
+            </div>
+
+            {/* System Status */}
+            <div
+              style={{
+                padding: '10px 20px',
+                background: isSimulating
+                  ? 'linear-gradient(135deg, rgba(47, 227, 208, 0.2) 0%, rgba(160, 216, 241, 0.15) 100%)'
+                  : 'rgba(255, 255, 255, 0.04)',
+                border: isSimulating
+                  ? '1px solid rgba(47, 227, 208, 0.5)'
+                  : '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '10px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                color: isSimulating ? '#2fe3d0' : '#8fa8b5',
+                boxShadow: isSimulating
+                  ? '0 0 20px rgba(47, 227, 208, 0.3)'
+                  : 'none',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              {isSimulating ? 'System Active' : 'System Idle'}
+            </div>
           </div>
         </div>
 
@@ -284,6 +391,7 @@ export default function Home() {
           onReset={resetSimulation}
           isSimulating={isSimulating}
           agentNames={alertInstances.length > 0 ? Object.keys(alertInstances[0].agents) : []}
+          samConnected={samStatus === 'connected'}
         />
       </section>
 

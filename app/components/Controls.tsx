@@ -8,6 +8,7 @@ interface ControlsProps {
   onReset: () => void;
   isSimulating: boolean;
   agentNames: string[];
+  samConnected?: boolean;
 }
 
 export default function Controls({
@@ -16,6 +17,7 @@ export default function Controls({
   onReset,
   isSimulating,
   agentNames,
+  samConnected = true,
 }: ControlsProps) {
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -59,27 +61,27 @@ export default function Controls({
         {/* TRIGGER BUTTON */}
         <button
           onClick={onTriggerAlert}
-          disabled={isSimulating}
+          disabled={isSimulating || !samConnected}
           onMouseEnter={() => setHovered('trigger')}
           onMouseLeave={() => setHovered(null)}
           style={{
             padding: '16px 36px',
-            background: isSimulating
+            background: isSimulating || !samConnected
               ? 'linear-gradient(135deg, #1a2428 0%, #0f1518 100%)'
               : 'linear-gradient(135deg, #2fe3d0 0%, #18d4c4 100%)',
-            color: isSimulating ? '#4a5a60' : '#000000',
-            border: isSimulating ? '1px solid #2a3438' : '1px solid rgba(47, 227, 208, 0.4)',
+            color: isSimulating || !samConnected ? '#4a5a60' : '#000000',
+            border: isSimulating || !samConnected ? '1px solid #2a3438' : '1px solid rgba(47, 227, 208, 0.4)',
             borderRadius: '12px',
-            cursor: isSimulating ? 'not-allowed' : 'pointer',
+            cursor: isSimulating || !samConnected ? 'not-allowed' : 'pointer',
             fontSize: '0.95rem',
             fontWeight: 700,
             letterSpacing: '1px',
             textTransform: 'uppercase',
             transform:
-              hovered === 'trigger' && !isSimulating
+              hovered === 'trigger' && !isSimulating && samConnected
                 ? 'translateY(-2px) scale(1.02)'
                 : 'none',
-            boxShadow: isSimulating
+            boxShadow: isSimulating || !samConnected
               ? 'inset 0 2px 4px rgba(0, 0, 0, 0.4)'
               : hovered === 'trigger'
               ? '0 8px 32px rgba(47, 227, 208, 0.6), 0 0 40px rgba(47, 227, 208, 0.3)'
@@ -89,7 +91,7 @@ export default function Controls({
             overflow: 'hidden',
           }}
         >
-          {isSimulating ? 'Simulating…' : 'Trigger AMBER Alert'}
+          {!samConnected ? '⚠️ SAM Not Connected' : isSimulating ? 'Simulating…' : 'Trigger AMBER Alert'}
         </button>
 
         {/* RESET BUTTON */}
