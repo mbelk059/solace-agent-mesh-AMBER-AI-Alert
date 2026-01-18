@@ -91,14 +91,70 @@ export default function Home() {
       return;
     }
     
-    const alertId = event.alert_id || event.data?.alert_id;
-    if (!alertId) {
-      console.warn('[Frontend] Event missing alert_id:', event.type);
-      return;
-    }
+    // Handle failure/recovery events specially - they can work without alert_id
+    const isFailureEvent = event.type === 'agent_failed' || event.type === 'agent_recovered';
     
     setAlerts((prev) => {
       const updated = { ...prev };
+      
+      // For failure/recovery events without alert_id, apply to all active alerts
+      if (isFailureEvent && !event.alert_id && !event.data?.alert_id) {
+        const activeAlerts = Object.values(updated).filter(a => a.status === 'active');
+        
+        if (activeAlerts.length === 0) {
+          // No active alerts, find most recent alert (even if resolved)
+          const allAlerts = Object.values(updated);
+          if (allAlerts.length > 0) {
+            const mostRecent = allAlerts.sort((a, b) => b.createdAt - a.createdAt)[0];
+            const alertId = mostRecent.alert_id;
+            const alert = updated[alertId];
+            
+            if (alert && event.from && alert.agents[event.from]) {
+              const newStatus: AgentStatus['status'] = event.type === 'agent_failed' ? 'error' : 'success';
+              alert.agents[event.from] = {
+                ...alert.agents[event.from],
+                status: newStatus,
+                lastEvent: event.type,
+                lastUpdate: Date.now(),
+              };
+              
+              // Add event to alert's event list
+              const eventExists = alert.events.some(e => e.id === event.id && e.timestamp === event.timestamp);
+              if (!eventExists) {
+                alert.events = [{ ...event, alert_id: alertId }, ...alert.events].slice(0, 100);
+              }
+            }
+          }
+        } else {
+          // Apply to all active alerts
+          activeAlerts.forEach((alert) => {
+            if (event.from && alert.agents[event.from]) {
+              const newStatus: AgentStatus['status'] = event.type === 'agent_failed' ? 'error' : 'success';
+              alert.agents[event.from] = {
+                ...alert.agents[event.from],
+                status: newStatus,
+                lastEvent: event.type,
+                lastUpdate: Date.now(),
+              };
+              
+              // Add event to alert's event list
+              const eventExists = alert.events.some(e => e.id === event.id && e.timestamp === event.timestamp);
+              if (!eventExists) {
+                alert.events = [{ ...event, alert_id: alert.alert_id }, ...alert.events].slice(0, 100);
+              }
+            }
+          });
+        }
+        
+        return { ...updated };
+      }
+      
+      // For other events, require alert_id
+      const alertId = event.alert_id || event.data?.alert_id;
+      if (!alertId) {
+        console.warn('[Frontend] Event missing alert_id:', event.type);
+        return updated;
+      }
       
       // Create alert if it doesn't exist
       if (!updated[alertId]) {
@@ -137,7 +193,7 @@ export default function Home() {
         } else if (event.type.includes('success') || event.type.includes('completed') || 
                    event.type.includes('initiated') || event.type.includes('created') ||
                    event.type.includes('assessed') || event.type.includes('received') ||
-                   event.type.includes('resolved')) {
+                   event.type.includes('resolved') || event.type.includes('recovered')) {
           newStatus = 'success';
         }
         
